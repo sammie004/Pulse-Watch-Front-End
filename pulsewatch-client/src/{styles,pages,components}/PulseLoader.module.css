@@ -1,0 +1,35 @@
+/* PulseLoader.module.css */
+.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.svg {
+  overflow: visible;
+}
+
+.path {
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  animation: draw 1.8s ease-in-out infinite;
+}
+
+.dot {
+  animation: moveDot 1.8s ease-in-out infinite;
+}
+
+@keyframes draw {
+  0%   { stroke-dashoffset: 400; opacity: 1; }
+  70%  { stroke-dashoffset: 0;   opacity: 1; }
+  85%  { stroke-dashoffset: 0;   opacity: 1; }
+  100% { stroke-dashoffset: 0;   opacity: 0; }
+}
+
+@keyframes moveDot {
+  0%   { cx: 0;   cy: 30; opacity: 0; }
+  5%   { opacity: 1; }
+  70%  { cx: 300; cy: 30; opacity: 1; }
+  85%  { cx: 300; cy: 30; opacity: 1; }
+  100% { cx: 300; cy: 30; opacity: 0; }
+}
