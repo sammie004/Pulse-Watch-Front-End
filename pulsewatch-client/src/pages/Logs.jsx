@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import s from './Logs.module.css'
 import PulseLoader from '../{styles,pages,components}/PulseLoader'
+import ResponseTimeChart from '../{styles,pages,components}/ResponseTimeChart'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -22,29 +23,28 @@ export default function Logs() {
   const [toDate,   setToDate]   = useState('')
   const [limit,    setLimit]    = useState(50)
 
-const fetchData = useCallback(async () => {
-  try {
-    // Build query string from active filters
-    const params = new URLSearchParams()
-    params.set('limit', limit)
-    if (fromDate) params.set('from', fromDate)
-    if (toDate)   params.set('to',   toDate)
+  const fetchData = useCallback(async () => {
+    try {
+      const params = new URLSearchParams()
+      params.set('limit', limit)
+      if (fromDate) params.set('from', fromDate)
+      if (toDate)   params.set('to',   toDate)
 
-    const res = await fetch(
-      `${API}/api/dashboard/logs/${id}?${params.toString()}`,
-      { headers: authHeaders() }
-    )
-    if (res.status === 401) { navigate('/login'); return }
-    const data = await res.json()
-    setLogs(data.logs   || [])
-    setStats(data.stats || null)
-    setUrlInfo(data.url || null)
-  } catch {
-    console.error('Failed to fetch logs')
-  } finally {
-    setLoading(false)
-  }
-}, [id, navigate, limit, fromDate, toDate])  // ← add limit, fromDate, toDate here
+      const res = await fetch(
+        `${API}/api/dashboard/logs/${id}?${params.toString()}`,
+        { headers: authHeaders() }
+      )
+      if (res.status === 401) { navigate('/login'); return }
+      const data = await res.json()
+      setLogs(data.logs   || [])
+      setStats(data.stats || null)
+      setUrlInfo(data.url || null)
+    } catch {
+      console.error('Failed to fetch logs')
+    } finally {
+      setLoading(false)
+    }
+  }, [id, navigate, limit, fromDate, toDate])
 
   useEffect(() => {
     fetchData()
@@ -54,29 +54,6 @@ const fetchData = useCallback(async () => {
 
   const isSuccess = code => code >= 200 && code < 400
 
-  // ── Filter logic ──────────────────────────────────────────────────────────
-  // Parse date inputs as local midnight to avoid UTC offset issues
-  const toLocalMidnight = dateStr => {
-    if (!dateStr) return null
-    const [y, m, d] = dateStr.split('-').map(Number)
-    return new Date(y, m - 1, d, 0, 0, 0, 0).getTime()
-  }
-
-  const toLocalEndOfDay = dateStr => {
-    if (!dateStr) return null
-    const [y, m, d] = dateStr.split('-').map(Number)
-    return new Date(y, m - 1, d, 23, 59, 59, 999).getTime()
-  }
-
-  const filteredLogs = logs.filter(log => {
-    const time = new Date(log.checked_at).getTime()
-    const from = toLocalMidnight(fromDate)
-    const to   = toLocalEndOfDay(toDate)
-    if (from && time < from) return false
-    if (to   && time > to)   return false
-    return true
-  }).slice(0, limit)
-
   const clearFilters = () => {
     setFromDate('')
     setToDate('')
@@ -84,33 +61,81 @@ const fetchData = useCallback(async () => {
   }
 
   const hasFilters = fromDate || toDate || limit !== 50
+  // Export as CSV function (client-side)
+  const exportCSV = () => {
+  if (!logs.length) {
+    alert("No logs to export")
+    return
+  }
 
-  // ── Full page loader ──────────────────────────────────────────────────────
+  const headers = [
+    "Status",
+    "Status Code",
+    "Response Time (ms)",
+    "Checked At",
+    "Error"
+  ]
+
+  const rows = logs.map(log => [
+    log.status_code >= 200 && log.status_code < 400 ? "UP" : "DOWN",
+    log.status_code ?? '',
+    log.response_time_ms ?? '',
+    new Date(log.checked_at).toISOString(),
+    log.error_message ?? ''
+  ])
+
+  // ✅ Wrap each value in quotes (VERY IMPORTANT)
+  const csvContent = [
+    headers.join(","),
+    ...rows.map(row =>
+      row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")
+    )
+  ].join("\n")
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement("a")
+  link.href = url
+  link.setAttribute("download", `logs-${id}.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+  
+  // Full page loader
   if (loading) return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#07090f',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '20px',
+  <div style={{
+    minHeight: '100vh',
+    background: '#07090f',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '20px',
+  }}>
+    <span style={{
+      fontFamily: "'Playfair Display', serif",
+      fontSize: '20px',
+      color: '#f0e6d0'
     }}>
-      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '20px', color: '#f0e6d0' }}>
-        PulseWatch
-      </span>
-      <PulseLoader color="#c9a96e" width={280} height={56} />
-      <span style={{
-        fontFamily: "'DM Mono', monospace",
-        fontSize: '10px',
-        color: 'rgba(255,255,255,0.22)',
-        letterSpacing: '3px',
-        textTransform: 'uppercase',
-      }}>
-        Loading logs...
-      </span>
-    </div>
-  )
+      PulseWatch
+    </span>
+
+    {/* ✅ Use your loader */}
+    <PulseLoader />
+
+    <span style={{
+      fontFamily: "'DM Mono', monospace",
+      fontSize: '10px',
+      color: 'rgba(255,255,255,0.22)',
+      letterSpacing: '3px',
+      textTransform: 'uppercase',
+    }}>
+      Loading logs...
+    </span>
+  </div>
+)
 
   return (
     <div className={s.page}>
@@ -153,9 +178,15 @@ const fetchData = useCallback(async () => {
           </div>
         </div>
 
+        {/* ── Response time chart ── */}
+        {logs.length > 0 && (
+          <div data-aos="fade-up">
+            <ResponseTimeChart logs={logs} />
+          </div>
+        )}
+
         {/* ── Filters ── */}
         <div className={s.filtersRow} data-aos="fade-up">
-
           <div className={s.filterGroup}>
             <label className={s.filterLabel}>From</label>
             <input
@@ -166,7 +197,6 @@ const fetchData = useCallback(async () => {
               onChange={e => setFromDate(e.target.value)}
             />
           </div>
-
           <div className={s.filterGroup}>
             <label className={s.filterLabel}>To</label>
             <input
@@ -177,7 +207,6 @@ const fetchData = useCallback(async () => {
               onChange={e => setToDate(e.target.value)}
             />
           </div>
-
           <div className={s.filterGroup}>
             <label className={s.filterLabel}>Show</label>
             <div className={s.limitBtns}>
@@ -192,20 +221,18 @@ const fetchData = useCallback(async () => {
               ))}
             </div>
           </div>
-
           {hasFilters && (
-            <button className={s.clearBtn} onClick={clearFilters}>
-              × Clear
-            </button>
+            <button className={s.clearBtn} onClick={clearFilters}>× Clear</button>
           )}
-
+           <div className={s.Export}>
+              <button className = {s.ExportButton} onClick={exportCSV}>Export as CSV</button>
+            </div>
           <div className={s.filterMeta}>
-            Showing <strong>{filteredLogs.length}</strong> of <strong>{logs.length}</strong> logs
+            Showing <strong>{logs.length}</strong> logs
           </div>
-
         </div>
 
-        {/* Log table */}
+        {/* ── Log table ── */}
         <div className={s.tableWrap} data-aos="zoom-in">
           <div className={s.tableHeader}>
             <div className={s.tableHeaderCell}>Status</div>
@@ -215,14 +242,14 @@ const fetchData = useCallback(async () => {
           </div>
 
           <div className={s.tableBody}>
-            {filteredLogs.length === 0 ? (
+            {logs.length === 0 ? (
               <div className={s.emptyState}>
                 {hasFilters
                   ? 'No logs match your filters — try adjusting the date range.'
                   : 'No logs yet — checks will appear here.'}
               </div>
             ) : (
-              filteredLogs.map((log, i) => (
+              logs.map((log, i) => (
                 <div key={i} className={s.tableRow}>
                   <div>
                     {log.error_message ? (

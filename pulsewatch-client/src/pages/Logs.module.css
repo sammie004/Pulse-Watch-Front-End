@@ -335,6 +335,8 @@
   cursor: pointer;
   transition: all 0.15s;
   align-self: flex-end;
+  position: relative;
+  left: 3%;
 }
 
 .clearBtn:hover {
@@ -355,4 +357,21 @@
 .filterMeta strong {
   color: var(--gold);
   font-weight: 500;
+}
+/* Export as CSV */
+.Export{
+  position: relative;
+  right: -3%;
+  display: inline-block;
+}
+.ExportButton {
+  padding: 9px 16px;
+  background: none;
+  border: 1px solid rgba(201,169,110,0.2);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(201,169,110,0.6);
+  cursor: pointer;
+  transition: all 0.15s;
 }

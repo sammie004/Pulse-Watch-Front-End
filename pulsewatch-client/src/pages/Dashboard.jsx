@@ -21,9 +21,13 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false)
   const [form,      setForm]      = useState({ url: '', name: '' })
   const [formError, setFormError] = useState('')
-  const [formLoad,  setFormLoad]  = useState(false)
-  const [deleteId,  setDeleteId]  = useState(null)
+  const [formLoad, setFormLoad] = useState(false)
+const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+const [deleteConfirmText, setDeleteConfirmText] = useState('')
+const [deleteError, setDeleteError] = useState('')
+const [deleteId, setDeleteId] = useState(null)
 
+  // logout handler
   const logout = useCallback(() => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
@@ -73,18 +77,30 @@ export default function Dashboard() {
     }
   }
 
-  const handleDelete = async id => {
-    setDeleteId(id)
-    try {
-      await fetch(`${API}/api/url/delete/${id}`, {
-        method:  'DELETE',
-        headers: authHeaders(),
-      })
-      setUrls(u => u.filter(x => x.id !== id))
-    } finally {
-      setDeleteId(null)
-    }
+const handleDelete = async () => {
+  const selectedUrl = urls.find(u => u.id === deleteId)
+  const expected = `sudo delete ${selectedUrl?.name || ''}`
+
+  if (deleteConfirmText !== expected) {
+    setDeleteError('Command does not match.')
+    return
   }
+
+  try {
+    await fetch(`${API}/api/url/delete/${deleteId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    })
+
+    setUrls(prev => prev.filter(u => u.id !== deleteId))
+    setDeleteModalOpen(false)
+    setDeleteConfirmText('')
+    setDeleteError('')
+  } catch {
+    setDeleteError('Failed to delete URL.')
+  }
+}
+
 
   const upCount   = urls.filter(u => u.status === 'up').length
   const downCount = urls.filter(u => u.status === 'down').length
@@ -237,13 +253,16 @@ export default function Dashboard() {
 
                   <div className={s.urlActions} onClick={e => e.stopPropagation()}>
                     <button
-                      className={s.actionBtn}
-                      onClick={() => handleDelete(u.id)}
-                      disabled={deleteId === u.id}
-                      title="Delete"
-                    >
-                      {deleteId === u.id ? '…' : '✕'}
-                    </button>
+  className={s.actionBtn}
+  onClick={() => {
+  console.log("clicked")
+  setDeleteId(u.id)
+  setDeleteModalOpen(true)
+}}
+  title="Delete"
+>
+  {deleteId === u.id ? '…' : '✕'}
+</button>
                   </div>
                 </div>
               </div>
@@ -251,6 +270,76 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+
+      
+      {/* Delete Modal */}
+       
+  {deleteModalOpen && (
+  <div className={s.overlay} onClick={() => setDeleteModalOpen(false)}>
+    <div className={s.modal} onClick={e => e.stopPropagation()}>
+
+      <div className={s.modalHeader}>
+        <div className={s.modalTitleBlock}>
+          <div className={s.modalEyebrow}>// Dangerous action</div>
+          <div className={s.modalTitle}>Delete URL</div>
+        </div>
+        <button
+          className={s.modalClose}
+          onClick={() => setDeleteModalOpen(false)}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className={s.modalBody}>
+        <p>
+          To confirm deletion, type:
+        </p>
+
+        <div style={{
+          fontFamily: 'monospace',
+          background: '#111',
+          padding: '10px',
+          borderRadius: '6px',
+          marginBottom: '10px',
+          color: '#f87171'
+        }}>
+          sudo delete {urls.find(u => u.id === deleteId)?.name || 'URL'}
+        </div>
+
+        <input
+          className={s.input}
+          value={deleteConfirmText}
+          onChange={e => setDeleteConfirmText(e.target.value)}
+          placeholder="Type command exactly..."
+        />
+
+        {deleteError && (
+          <div className={`${s.alertBox} ${s.alertError}`}>
+            {deleteError}
+          </div>
+        )}
+      </div>
+
+      <div className={s.modalFooter}>
+        <button
+          className={s.btnGhost}
+          onClick={() => setDeleteModalOpen(false)}
+        >
+          Cancel
+        </button>
+
+        <button
+          className={s.btnPrimary}
+          onClick={handleDelete}
+        >
+          Delete permanently
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
 
       {/* ── Add URL Modal ── */}
       {showModal && (
