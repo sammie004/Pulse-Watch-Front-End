@@ -15,13 +15,18 @@ export default function Logs() {
   const { id }   = useParams()
   const navigate = useNavigate()
 
-  const [logs,     setLogs]     = useState([])
-  const [stats,    setStats]    = useState(null)
-  const [urlInfo,  setUrlInfo]  = useState(null)
-  const [loading,  setLoading]  = useState(true)
-  const [fromDate, setFromDate] = useState('')
-  const [toDate,   setToDate]   = useState('')
-  const [limit,    setLimit]    = useState(50)
+  const [logs,             setLogs]            = useState([])
+  const [stats,            setStats]           = useState(null)
+  const [urlInfo,          setUrlInfo]         = useState(null)
+  const [loading,          setLoading]         = useState(true)
+  const [minLoading,       setMinLoading]      = useState(true)
+  const [fromDate,         setFromDate]        = useState('')
+  const [toDate,           setToDate]          = useState('')
+  const [limit,            setLimit]           = useState(50)
+  const [uptime,           setUptime]          = useState(null)
+  const [trend,            setTrend]           = useState(null)
+  const [changePercentage, setChangePercentage] = useState(0)
+  const [previousUptime,   setPreviousUptime]  = useState(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -39,6 +44,22 @@ export default function Logs() {
       setLogs(data.logs   || [])
       setStats(data.stats || null)
       setUrlInfo(data.url || null)
+
+      // Fetch uptime separately
+      try {
+        const uptimeRes = await fetch(`${API}/api/dashboard/uptime/${id}`, {
+          headers: authHeaders(),
+        })
+        if (uptimeRes.ok) {
+          const ud = await uptimeRes.json()
+          setUptime(ud.uptime_percentage ?? null)
+          setTrend(ud.trend ?? null)
+          setChangePercentage(ud.change_percentage ?? 0)
+          setPreviousUptime(ud.previous_uptime ?? null)
+        }
+      } catch {
+        // uptime is optional — don't crash if endpoint isn't wired yet
+      }
     } catch {
       console.error('Failed to fetch logs')
     } finally {
@@ -52,7 +73,13 @@ export default function Logs() {
     return () => clearInterval(interval)
   }, [fetchData])
 
-  const isSuccess = code => code >= 200 && code < 400
+  useEffect(() => {
+    const t = setTimeout(() => setMinLoading(false), 2000)
+    return () => clearTimeout(t)
+  }, [])
+
+  const isSuccess  = code => code >= 200 && code < 400
+  const hasFilters = fromDate || toDate || limit !== 50
 
   const clearFilters = () => {
     setFromDate('')
@@ -60,82 +87,62 @@ export default function Logs() {
     setLimit(50)
   }
 
-  const hasFilters = fromDate || toDate || limit !== 50
-  // Export as CSV function (client-side)
   const exportCSV = () => {
-  if (!logs.length) {
-    alert("No logs to export")
-    return
+    if (!logs.length) return
+    const headers = ["Status", "Status Code", "Response Time (ms)", "Checked At", "Error"]
+    const rows = logs.map(log => [
+      isSuccess(log.status_code) ? "UP" : "DOWN",
+      log.status_code ?? '',
+      log.response_time_ms ?? '',
+      new Date(log.checked_at).toISOString(),
+      log.error_message ?? '',
+    ])
+    const csv = [headers, ...rows]
+      .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+    a.download = `logs-${id}.csv`
+    a.click()
   }
 
-  const headers = [
-    "Status",
-    "Status Code",
-    "Response Time (ms)",
-    "Checked At",
-    "Error"
-  ]
+  // ── Uptime display helpers ────────────────────────────────────────────────
+  // Color the uptime percentage based on how healthy it is
+  const uptimeColor = uptime === null ? 'rgba(255,255,255,0.4)'
+                    : uptime >= 99    ? '#34d399'
+                    : uptime >= 95    ? '#ebe8e1'
+                    : uptime >= 90    ? '#e9e1ce'
+                    :                   '#f87171'
 
-  const rows = logs.map(log => [
-    log.status_code >= 200 && log.status_code < 400 ? "UP" : "DOWN",
-    log.status_code ?? '',
-    log.response_time_ms ?? '',
-    new Date(log.checked_at).toISOString(),
-    log.error_message ?? ''
-  ])
+  // trend is 'up' | 'down' | 'neutral' | null
+  // null means not enough data to compare (less than 2 weeks of logs)
+  const trendIcon  = trend === 'up'      ? '↑'
+                   : trend === 'down'    ? '↓'
+                   : trend === 'neutral' ? '—'
+                   : null
 
-  // ✅ Wrap each value in quotes (VERY IMPORTANT)
-  const csvContent = [
-    headers.join(","),
-    ...rows.map(row =>
-      row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")
-    )
-  ].join("\n")
+  const trendColor = trend === 'up'      ? '#34d399'
+                   : trend === 'down'    ? '#f87171'
+                   :                       'rgba(255,255,255,0.35)'
 
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-  const url = URL.createObjectURL(blob)
-
-  const link = document.createElement("a")
-  link.href = url
-  link.setAttribute("download", `logs-${id}.csv`)
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-  
-  // Full page loader
-  if (loading) return (
-  <div style={{
-    minHeight: '100vh',
-    background: '#07090f',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '20px',
-  }}>
-    <span style={{
-      fontFamily: "'Playfair Display', serif",
-      fontSize: '20px',
-      color: '#f0e6d0'
+  if (loading || minLoading) return (
+    <div style={{
+      minHeight: '100vh', background: '#07090f',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: '20px',
     }}>
-      PulseWatch
-    </span>
-
-    {/* ✅ Use your loader */}
-    <PulseLoader />
-
-    <span style={{
-      fontFamily: "'DM Mono', monospace",
-      fontSize: '10px',
-      color: 'rgba(255,255,255,0.22)',
-      letterSpacing: '3px',
-      textTransform: 'uppercase',
-    }}>
-      Loading logs...
-    </span>
-  </div>
-)
+      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '20px', color: '#f0e6d0' }}>
+        PulseWatch
+      </span>
+      <PulseLoader color="#c9a96e" width={280} height={56} />
+      <span style={{
+        fontFamily: "'DM Mono', monospace", fontSize: '10px',
+        color: 'rgba(255,255,255,0.22)', letterSpacing: '3px', textTransform: 'uppercase',
+      }}>
+        Loading logs...
+      </span>
+    </div>
+  )
 
   return (
     <div className={s.page}>
@@ -151,11 +158,41 @@ export default function Logs() {
 
       <main className={s.main}>
 
+        {/* ── Page header ── */}
         <div className={s.pageHeader}>
-          <h1 className={s.pageTitle}>
-            Logs for <span>{urlInfo?.name || urlInfo?.url || `URL #${id}`}</span>
-          </h1>
-          {urlInfo && <div className={s.urlLabel}>{urlInfo.url}</div>}
+          <div>
+            <h1 className={s.pageTitle}>
+              Logs for <span>{urlInfo?.name || urlInfo?.url || `URL #${id}`}</span>
+            </h1>
+            {urlInfo && <div className={s.urlLabel}>{urlInfo.url}</div>}
+          </div>
+
+          {/* ── Uptime chip ── */}
+          {uptime !== null && (
+            <div className={s.uptimeChip}>
+              <div className={s.uptimeMain}>
+                <span className={s.uptimePct} style={{ color: uptimeColor }}>
+                  {uptime.toFixed(2)}%
+                </span>
+                <span className={s.uptimeLabel}>uptime · last 7 days</span>
+              </div>
+
+              {/* Only show trend if we have previous week data to compare */}
+              {trendIcon && (
+                <div className={s.uptimeTrend} style={{ color: trendColor }}>
+                  <span className={s.trendIcon}>{trendIcon}</span>
+                  <span className={s.trendChange}>
+                    {changePercentage > 0 && '+'}{changePercentage.toFixed(2)}%
+                  </span>
+                  {previousUptime !== null && (
+                    <span className={s.trendPrev}>
+                      vs {previousUptime.toFixed(2)}% prev week
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Stats */}
@@ -189,44 +226,28 @@ export default function Logs() {
         <div className={s.filtersRow} data-aos="fade-up">
           <div className={s.filterGroup}>
             <label className={s.filterLabel}>From</label>
-            <input
-              type="date"
-              className={s.dateInput}
-              value={fromDate}
-              max={toDate || undefined}
-              onChange={e => setFromDate(e.target.value)}
-            />
+            <input type="date" className={s.dateInput} value={fromDate}
+              max={toDate || undefined} onChange={e => setFromDate(e.target.value)} />
           </div>
           <div className={s.filterGroup}>
             <label className={s.filterLabel}>To</label>
-            <input
-              type="date"
-              className={s.dateInput}
-              value={toDate}
-              min={fromDate || undefined}
-              onChange={e => setToDate(e.target.value)}
-            />
+            <input type="date" className={s.dateInput} value={toDate}
+              min={fromDate || undefined} onChange={e => setToDate(e.target.value)} />
           </div>
           <div className={s.filterGroup}>
             <label className={s.filterLabel}>Show</label>
             <div className={s.limitBtns}>
               {[10, 25, 50, 100].map(n => (
-                <button
-                  key={n}
+                <button key={n}
                   className={`${s.limitBtn} ${limit === n ? s.limitBtnActive : ''}`}
-                  onClick={() => setLimit(n)}
-                >
-                  {n}
-                </button>
+                  onClick={() => setLimit(n)}>{n}</button>
               ))}
             </div>
           </div>
           {hasFilters && (
             <button className={s.clearBtn} onClick={clearFilters}>× Clear</button>
           )}
-           <div className={s.Export}>
-              <button className = {s.ExportButton} onClick={exportCSV}>Export as CSV</button>
-            </div>
+          <button className={s.exportBtn} onClick={exportCSV}>Export as CSV</button>
           <div className={s.filterMeta}>
             Showing <strong>{logs.length}</strong> logs
           </div>
@@ -240,7 +261,6 @@ export default function Logs() {
             <div className={s.tableHeaderCell}>Response Time</div>
             <div className={s.tableHeaderCell}>Checked At</div>
           </div>
-
           <div className={s.tableBody}>
             {logs.length === 0 ? (
               <div className={s.emptyState}>

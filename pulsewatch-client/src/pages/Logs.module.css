@@ -123,20 +123,15 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  max-height: 320px;        /* ← cap the height */
-  display: flex;
-  flex-direction: column;
+  animation: fadeUp 0.5s 0.2s ease both;
 }
+
 .tableHeader {
   display: grid;
   grid-template-columns: 1fr 100px 120px 140px;
   padding: 14px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--surface-3);
-  flex-shrink: 0;           /* ← header never shrinks */
-  position: sticky;
-  top: 0;
-  z-index: 1;
 }
 
 .tableHeaderCell {
@@ -147,27 +142,10 @@
   text-transform: uppercase;
 }
 
-.tableBody {
-  overflow-y: auto;
-  flex: 1;
- }
- /* Style the scrollbar to match your theme */
-.tableBody::-webkit-scrollbar {
-  width: 4px;
+.tableBody { 
+  overflow-x: hidden;
 }
 
-.tableBody::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.tableBody::-webkit-scrollbar-thumb {
-  background: rgba(201,169,110,0.2);
-  border-radius: 2px;
-}
-
-.tableBody::-webkit-scrollbar-thumb:hover {
-  background: rgba(201,169,110,0.4);
-}
 .tableRow {
   display: grid;
   grid-template-columns: 1fr 100px 120px 140px;
@@ -335,8 +313,6 @@
   cursor: pointer;
   transition: all 0.15s;
   align-self: flex-end;
-  position: relative;
-  left: 3%;
 }
 
 .clearBtn:hover {
@@ -358,20 +334,226 @@
   color: var(--gold);
   font-weight: 500;
 }
-/* Export as CSV */
-.Export{
-  position: relative;
-  right: -3%;
-  display: inline-block;
+
+/* ── Page header with uptime ── */
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
+  animation: fadeUp 0.5s ease both;
 }
-.ExportButton {
+
+/* ── Uptime chip ── */
+.uptimeChip {
+  background: linear-gradient(160deg, #0d1117 0%, #0a0d14 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.uptimeMain {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.uptimePct {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.uptimeLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: rgba(255,255,255,0.22);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.uptimeTrend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trendIcon {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.trendChange {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.trendPrev {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.2);
+  letter-spacing: 0.3px;
+}
+
+/* ── Export button ── */
+.exportBtn {
   padding: 9px 16px;
   background: none;
-  border: 1px solid rgba(201,169,110,0.2);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
+  font-family: 'DM Mono', monospace;
   font-size: 11px;
-  color: rgba(201,169,110,0.6);
+  color: rgba(255,255,255,0.3);
   cursor: pointer;
   transition: all 0.15s;
+  align-self: flex-end;
+  letter-spacing: 0.5px;
+}
+
+.exportBtn:hover {
+  border-color: rgba(201,169,110,0.3);
+  color: var(--gold);
+  background: rgba(201,169,110,0.04);
+}
+
+/* ── Page header ── */
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
+  animation: fadeUp 0.5s ease both;
+}
+
+/* ── Uptime chip ── */
+.uptimeChip {
+  background: linear-gradient(160deg, #0d1117 0%, #0a0d14 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.uptimeMain {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.uptimePct {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.uptimeLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: rgba(255,255,255,0.22);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.uptimeTrend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trendIcon {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.trendChange {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.trendPrev {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.2);
+}
+
+/* ── Export button ── */
+.exportBtn {
+  padding: 9px 16px;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  cursor: pointer;
+  transition: all 0.15s;
+  align-self: flex-end;
+  letter-spacing: 0.5px;
+}
+
+.exportBtn:hover {
+  border-color: rgba(201,169,110,0.3);
+  color: #c9a96e;
+  background: rgba(201,169,110,0.04);
+}
+
+.tableWrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 520px;        /* ← cap the height */
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 1fr 100px 120px 140px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-3);
+  flex-shrink: 0;            /* ← header never moves */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.tableBody {
+  overflow-y: auto;          /* ← only body scrolls */
+  flex: 1;
+}
+
+.tableBody::-webkit-scrollbar {
+  width: 4px;
+}
+
+.tableBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tableBody::-webkit-scrollbar-thumb {
+  background: rgba(201,169,110,0.2);
+  border-radius: 2px;
+}
+
+.tableBody::-webkit-scrollbar-thumb:hover {
+  background: rgba(201,169,110,0.4);
 }

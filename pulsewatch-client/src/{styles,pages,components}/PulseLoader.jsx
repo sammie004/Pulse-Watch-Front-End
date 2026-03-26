@@ -1,7 +1,7 @@
 // PulseLoader.jsx
 import s from './PulseLoader.module.css'
 
-export default function PulseLoader({ color = '#34d399', width = 300, height = 60 }) {
+export default function PulseLoader({ color = '#d3b834', width = 300, height = 60 }) {
   return (
     <div className={s.wrap}>
       <svg
