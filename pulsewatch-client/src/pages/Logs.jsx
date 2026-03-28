@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import s from './Logs.module.css'
-import PulseLoader from '../{styles,pages,components}/PulseLoader'
+import PulseLoader       from '../{styles,pages,components}/PulseLoader'
 import ResponseTimeChart from '../{styles,pages,components}/ResponseTimeChart'
+import TrafficChart      from '../{styles,pages,components}/TrafficChart'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -18,6 +19,7 @@ export default function Logs() {
   const [logs,             setLogs]            = useState([])
   const [stats,            setStats]           = useState(null)
   const [urlInfo,          setUrlInfo]         = useState(null)
+  const [trafficData,      setTrafficData]     = useState(null)
   const [loading,          setLoading]         = useState(true)
   const [minLoading,       setMinLoading]      = useState(true)
   const [fromDate,         setFromDate]        = useState('')
@@ -27,6 +29,7 @@ export default function Logs() {
   const [trend,            setTrend]           = useState(null)
   const [changePercentage, setChangePercentage] = useState(0)
   const [previousUptime,   setPreviousUptime]  = useState(null)
+  const [chartTab,         setChartTab]        = useState('response')
 
   const fetchData = useCallback(async () => {
     try {
@@ -35,33 +38,37 @@ export default function Logs() {
       if (fromDate) params.set('from', fromDate)
       if (toDate)   params.set('to',   toDate)
 
-      const res = await fetch(
-        `${API}/api/dashboard/logs/${id}?${params.toString()}`,
-        { headers: authHeaders() }
-      )
-      if (res.status === 401) { navigate('/login'); return }
-      const data = await res.json()
+      // Run all three fetches in parallel
+      const [logsRes, trafficRes, uptimeRes] = await Promise.all([
+        fetch(`${API}/api/dashboard/logs/${id}?${params.toString()}`, { headers: authHeaders() }),
+        fetch(`${API}/api/traffic/data/${id}`,                        { headers: authHeaders() }),
+        fetch(`${API}/api/dashboard/uptime/${id}`,                    { headers: authHeaders() }),
+      ])
+
+      if (logsRes.status === 401) { navigate('/login'); return }
+
+      const data = await logsRes.json()
       setLogs(data.logs   || [])
       setStats(data.stats || null)
       setUrlInfo(data.url || null)
 
-      // Fetch uptime separately
-      try {
-        const uptimeRes = await fetch(`${API}/api/dashboard/uptime/${id}`, {
-          headers: authHeaders(),
-        })
-        if (uptimeRes.ok) {
-          const ud = await uptimeRes.json()
-          setUptime(ud.uptime_percentage ?? null)
-          setTrend(ud.trend ?? null)
-          setChangePercentage(ud.change_percentage ?? 0)
-          setPreviousUptime(ud.previous_uptime ?? null)
-        }
-      } catch {
-        // uptime is optional — don't crash if endpoint isn't wired yet
+      if (trafficRes.ok) {
+        const traffic = await trafficRes.json()
+        setTrafficData(traffic)
+      } else {
+        setTrafficData(null)
       }
-    } catch {
-      console.error('Failed to fetch logs')
+
+      if (uptimeRes.ok) {
+        const ud = await uptimeRes.json()
+        setUptime(ud.uptime_percentage ?? null)
+        setTrend(ud.trend ?? null)
+        setChangePercentage(ud.change_percentage ?? 0)
+        setPreviousUptime(ud.previous_uptime ?? null)
+      }
+
+    } catch (err) {
+      console.error('Failed to fetch logs', err)
     } finally {
       setLoading(false)
     }
@@ -80,12 +87,7 @@ export default function Logs() {
 
   const isSuccess  = code => code >= 200 && code < 400
   const hasFilters = fromDate || toDate || limit !== 50
-
-  const clearFilters = () => {
-    setFromDate('')
-    setToDate('')
-    setLimit(50)
-  }
+  const clearFilters = () => { setFromDate(''); setToDate(''); setLimit(50) }
 
   const exportCSV = () => {
     if (!logs.length) return
@@ -106,24 +108,20 @@ export default function Logs() {
     a.click()
   }
 
-  // ── Uptime display helpers ────────────────────────────────────────────────
-  // Color the uptime percentage based on how healthy it is
   const uptimeColor = uptime === null ? 'rgba(255,255,255,0.4)'
                     : uptime >= 99    ? '#34d399'
-                    : uptime >= 95    ? '#ebe8e1'
-                    : uptime >= 90    ? '#e9e1ce'
+                    : uptime >= 95    ? '#c9a96e'
+                    : uptime >= 90    ? '#fbbf24'
                     :                   '#f87171'
 
-  // trend is 'up' | 'down' | 'neutral' | null
-  // null means not enough data to compare (less than 2 weeks of logs)
   const trendIcon  = trend === 'up'      ? '↑'
                    : trend === 'down'    ? '↓'
                    : trend === 'neutral' ? '—'
                    : null
 
-  const trendColor = trend === 'up'      ? '#34d399'
-                   : trend === 'down'    ? '#f87171'
-                   :                       'rgba(255,255,255,0.35)'
+  const trendColor = trend === 'up'   ? '#34d399'
+                   : trend === 'down' ? '#f87171'
+                   :                    'rgba(255,255,255,0.35)'
 
   if (loading || minLoading) return (
     <div style={{
@@ -138,9 +136,7 @@ export default function Logs() {
       <span style={{
         fontFamily: "'DM Mono', monospace", fontSize: '10px',
         color: 'rgba(255,255,255,0.22)', letterSpacing: '3px', textTransform: 'uppercase',
-      }}>
-        Loading logs...
-      </span>
+      }}>Loading logs...</span>
     </div>
   )
 
@@ -158,7 +154,7 @@ export default function Logs() {
 
       <main className={s.main}>
 
-        {/* ── Page header ── */}
+        {/* Page header */}
         <div className={s.pageHeader}>
           <div>
             <h1 className={s.pageTitle}>
@@ -167,7 +163,7 @@ export default function Logs() {
             {urlInfo && <div className={s.urlLabel}>{urlInfo.url}</div>}
           </div>
 
-          {/* ── Uptime chip ── */}
+          {/* Uptime chip */}
           {uptime !== null && (
             <div className={s.uptimeChip}>
               <div className={s.uptimeMain}>
@@ -176,8 +172,6 @@ export default function Logs() {
                 </span>
                 <span className={s.uptimeLabel}>uptime · last 7 days</span>
               </div>
-
-              {/* Only show trend if we have previous week data to compare */}
               {trendIcon && (
                 <div className={s.uptimeTrend} style={{ color: trendColor }}>
                   <span className={s.trendIcon}>{trendIcon}</span>
@@ -185,9 +179,7 @@ export default function Logs() {
                     {changePercentage > 0 && '+'}{changePercentage.toFixed(2)}%
                   </span>
                   {previousUptime !== null && (
-                    <span className={s.trendPrev}>
-                      vs {previousUptime.toFixed(2)}% prev week
-                    </span>
+                    <span className={s.trendPrev}>vs {previousUptime.toFixed(2)}% prev week</span>
                   )}
                 </div>
               )}
@@ -215,14 +207,47 @@ export default function Logs() {
           </div>
         </div>
 
-        {/* ── Response time chart ── */}
+        {/* Chart tabs */}
         {logs.length > 0 && (
-          <div data-aos="fade-up">
-            <ResponseTimeChart logs={logs} />
+          <div className={s.chartSection} data-aos="fade-up">
+            <div className={s.chartTabs}>
+              <button
+                className={`${s.chartTab} ${chartTab === 'response' ? s.chartTabActive : ''}`}
+                onClick={() => setChartTab('response')}
+              >
+                📈 Response Time
+              </button>
+              <button
+                className={`${s.chartTab} ${chartTab === 'traffic' ? s.chartTabActive : ''}`}
+                onClick={() => setChartTab('traffic')}
+              >
+                👥 Traffic
+                {!trafficData && <span className={s.chartTabLock}> · No data</span>}
+              </button>
+            </div>
+
+            <div className={s.chartBody}>
+              {chartTab === 'response' && <ResponseTimeChart logs={logs} />}
+              {chartTab === 'traffic' && (
+                !trafficData || trafficData.summary?.totalVisits === 0 ? (
+                  <div className={s.emptyState}>
+                    <div style={{ fontSize: '14px', marginBottom: '6px' }}>No traffic data yet 👀</div>
+                    <span style={{ fontSize: '11px', opacity: 0.6 }}>
+                      Add the tracking script to your site to start collecting data.
+                    </span>
+                    <code style={{ display: 'block', marginTop: '10px', fontSize: '10px', opacity: 0.5 }}>
+                      {`<script src="${API}/api/traffic/snippet/${id}" async></script>`}
+                    </code>
+                  </div>
+                ) : (
+                  <TrafficChart data={trafficData} />
+                )
+              )}
+            </div>
           </div>
         )}
 
-        {/* ── Filters ── */}
+        {/* Filters */}
         <div className={s.filtersRow} data-aos="fade-up">
           <div className={s.filterGroup}>
             <label className={s.filterLabel}>From</label>
@@ -244,16 +269,14 @@ export default function Logs() {
               ))}
             </div>
           </div>
-          {hasFilters && (
-            <button className={s.clearBtn} onClick={clearFilters}>× Clear</button>
-          )}
-          <button className={s.exportBtn} onClick={exportCSV}>Export as CSV</button>
+          {hasFilters && <button className={s.clearBtn} onClick={clearFilters}>× Clear</button>}
+          <button className={s.exportBtn} onClick={exportCSV}>↓ CSV</button>
           <div className={s.filterMeta}>
             Showing <strong>{logs.length}</strong> logs
           </div>
         </div>
 
-        {/* ── Log table ── */}
+        {/* Log table */}
         <div className={s.tableWrap} data-aos="zoom-in">
           <div className={s.tableHeader}>
             <div className={s.tableHeaderCell}>Status</div>
@@ -264,9 +287,7 @@ export default function Logs() {
           <div className={s.tableBody}>
             {logs.length === 0 ? (
               <div className={s.emptyState}>
-                {hasFilters
-                  ? 'No logs match your filters — try adjusting the date range.'
-                  : 'No logs yet — checks will appear here.'}
+                {hasFilters ? 'No logs match your filters.' : 'No logs yet.'}
               </div>
             ) : (
               logs.map((log, i) => (

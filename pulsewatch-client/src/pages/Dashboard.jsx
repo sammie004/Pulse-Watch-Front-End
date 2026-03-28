@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import SnippetBox from '../{styles,pages,components}/SnippetBox'
 import s from './Dashboard.module.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -236,6 +237,9 @@ const handleDelete = async () => {
                       <span className={s.urlMetaLabel}>Response</span>
                     </div>
                   )}
+                  <div onClick={e => e.stopPropagation()}>
+  <SnippetBox urlId={u.id} />
+</div>
                   {u.last_checked && (
                     <div className={s.urlMeta}>
                       <span className={s.urlMetaVal}>

@@ -557,3 +557,54 @@
 .tableBody::-webkit-scrollbar-thumb:hover {
   background: rgba(201,169,110,0.4);
 }
+/* ── Chart tabs ── */
+.chartSection {
+  margin-bottom: 20px;
+}
+ 
+.chartTabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding-bottom: 0;
+}
+ 
+.chartTab {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.3);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: -1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+ 
+.chartTab:hover:not(:disabled) { color: rgba(255,255,255,0.6); }
+ 
+.chartTab:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+ 
+.chartTabActive {
+  color: #c9a96e !important;
+  border-bottom-color: #c9a96e !important;
+}
+ 
+.chartTabLock {
+  font-size: 10px;
+  color: rgba(255,255,255,0.2);
+  font-weight: 300;
+}
+ 
+.chartBody {
+  padding-top: 16px;
+}

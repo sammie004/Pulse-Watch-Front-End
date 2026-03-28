@@ -1,0 +1,164 @@
+.wrap {
+  margin-top: 10px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── Toggle ── */
+.toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  background: rgba(255,255,255,0.02);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.toggle:hover { background: rgba(255,255,255,0.04); }
+.toggleOpen   { background: rgba(201,169,110,0.05) !important; }
+
+.toggleIcon  { font-size: 14px; }
+
+.toggleLabel {
+  flex: 1;
+  text-align: left;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.toggleOpen .toggleLabel { color: rgba(201,169,110,0.7); }
+
+.toggleChevron {
+  font-size: 9px;
+  color: rgba(255,255,255,0.2);
+}
+
+/* ── Panel ── */
+.panel {
+  border-top: 1px solid rgba(255,255,255,0.05);
+  background: rgba(0,0,0,0.2);
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 10px 14px 0;
+}
+
+.tabBtn {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.25);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tabBtn:hover { color: rgba(255,255,255,0.5); }
+
+.tabActive {
+  color: #c9a96e !important;
+  border-color: rgba(201,169,110,0.25) !important;
+  background: rgba(201,169,110,0.06) !important;
+}
+
+/* ── Tab body ── */
+.tabBody { padding: 12px 14px 14px; }
+
+.desc {
+  font-size: 12px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.28);
+  line-height: 1.6;
+  margin-bottom: 10px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.code {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: rgba(201,169,110,0.7);
+  background: rgba(201,169,110,0.08);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* ── Snippet row ── */
+.snippetRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 6px;
+  padding: 9px 12px;
+}
+
+.snippet {
+  flex: 1;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.copyBtn {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.3);
+  background: none;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px;
+  padding: 4px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.copyBtn:hover {
+  color: rgba(255,255,255,0.6);
+  border-color: rgba(255,255,255,0.15);
+}
+
+.copied {
+  color: #34d399 !important;
+  border-color: rgba(52,211,153,0.3) !important;
+}
+
+.loading {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.2);
+  padding: 6px 0;
+}
+
+.error {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: #f87171;
+  padding: 6px 0;
+}
